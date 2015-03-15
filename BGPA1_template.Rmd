@@ -1,0 +1,106 @@
+---
+title: "Peer Assessment 1"
+author: "Bhavani Ganapathy"
+date: "Saturday, March 14, 2015"
+output: html_document
+Comments : This is my first R Markdown file written for the peer assesment 1 assignment for the Coursera - Reproducible Research course.
+---
+
+```{r}
+
+setwd("C:/Data")
+
+url <- 'https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip'
+
+if (!file.exists('repdata%2Fdata%2Factivity.zip')) {
+  download.file(url, 'repdata%2Fdata%2Factivity.zip')
+  unzip('repdata%2Fdata%2Factivity.zip', exdir='./data')
+}
+
+activity <- read.csv(file = "./data/activity.csv", header = TRUE)
+summary(activity)
+totalStepsPerDay <- aggregate(steps~date, data=activity,FUN=sum, na.rm=TRUE)
+
+```
+```{r, echo=FALSE}
+hist(totalStepsPerDay$steps,main = "Total Steps Per Day", ylab = "Total No. of Steps", xlab = "Days", col="red")
+```
+
+```{r}
+
+stepsMean <- mean(totalStepsPerDay $steps)
+print(stepsMean)
+stepsMedian <- median(totalStepsPerDay $steps)
+print(stepsMedian)
+
+stepsInterval <- aggregate(steps~interval, data =activity,FUN=mean, na.rm = TRUE)
+plot(steps ~ interval, data = stepsInterval, type = "l")
+
+maximumSteps <- stepsInterval[which.max(stepsInterval$steps), ]$interval
+print(maximumSteps)
+
+```
+
+Inputing missing values
+
+Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+```{r}
+
+totalMissingValues <- sum(is.na(activity$steps))
+print(totalMissingValues)
+#Replace the missing values with mean for 5 minute interval
+meanForInterval <- function(interval) {
+    stepsInterval[stepsInterval$interval == interval, ]$steps
+}
+# First load the original dataset
+missingFilled <- activity  
+counter = 0  
+for (i in 1:nrow(missingFilled)) 
+{
+        if (is.na(missingFilled[i, ]$steps)) 
+        {
+          missingFilled[i, ]$steps <- meanForInterval(missingFilled[i, ]$interval)
+            counter = counter + 1
+        }
+}
+cat("Total ", counter, "NA values were filled.\n\r")
+
+```
+#Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+```{r, echo=FALSE}
+totalSteps <- aggregate(steps ~ date, data = missingFilled, sum)
+hist(totalSteps$steps,main = "Total Steps Per Day without any NAs", ylab = "Total No. of Steps", xlab = "Days", col="blue")
+
+meanWithoutNA <- mean(totalSteps$steps)
+print(meanWithoutNA)
+
+medianWithoutNA <- median(totalSteps$steps)
+print(medianWithoutNA)
+
+```
+
+Are there differences in activity patterns between weekdays and weekends?
+
+For this part the weekdays() function may be of some help here. Use the dataset with the filled-in missing values for this part.
+
+1. Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+
+```{r}
+missingFilled$days = ifelse(as.POSIXlt(as.Date(missingFilled$date))$wday%%6 ==0, "weekend", "weekday")
+# For Sunday and Saturday : weekend, Other days : weekday
+missingFilled$days = factor(missingFilled$day, levels = c("weekday", "weekend"))
+```
+
+The mean value is the same as the one with the pervious assignment where as the median is slightly different.
+
+Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). See the README file in the GitHub repository to see an example of what this plot should look like using simulated data.
+
+```{r, echo=FALSE}
+stepsInterval = aggregate(steps ~ interval + days, missingFilled, mean)
+library(lattice)
+xyplot(steps ~ interval | factor(days), data = stepsInterval, aspect = 1/2, 
+    type = "l")
+```
+
